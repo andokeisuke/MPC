@@ -1,4 +1,5 @@
 <launch>
+  <node pkg="tf" type="static_transform_publisher" name="map_broadcaster" args="0 0 0 0 0 0  world map 100" />
   <arg name="model" default="$(find mpc)/urdf/robot.urdf" />
   <!--<arg name="rvizconfig" default="$(find mpc)/rviz/move_robot.rviz" />-->
   <arg name="joy" default="false" />

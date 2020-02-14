@@ -10,6 +10,7 @@ import tf
 
 state_ref = Pose2D()
 publisher2 = rospy.Publisher('pose',Pose2D, queue_size=10)
+
 def quaternion_to_yaw(quaternion):
     """Convert Quaternion to Euler Angles
 
@@ -50,9 +51,6 @@ def main():
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             
             continue
-
-        
-        
         state.x = trans[0]
         state.y = trans[1]
         e = tf.transformations.euler_from_quaternion((rot[0], rot[1], rot[2], rot[3]))
