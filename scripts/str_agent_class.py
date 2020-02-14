@@ -18,8 +18,7 @@ class NMPCSimulatorSystem():
         -----------
         None
         """
-
-        pass
+        self.state_ref = []
 
     def calc_predict_and_adjoint_state(self, x_1, x_2, x_3, u_1s, u_2s, u_3s, N, dt):
         """main
@@ -139,9 +138,9 @@ class NMPCSimulatorSystem():
         # final_state_func
        
 
-        lam_1s = [x_1s[-1]]
-        lam_2s = [x_2s[-1]]
-        lam_3s = [x_3s[-1]]
+        lam_1s = [x_1s[-1]-self.state_ref[0]]
+        lam_2s = [x_2s[-1]-self.state_ref[1]]
+        lam_3s = [x_3s[-1]-self.state_ref[2]]
 
         for i in range(N-1, 0, -1): 
             temp_lam_1, temp_lam_2, temp_lam_3 = self._adjoint_state_with_oylar(x_1s[i], x_2s[i], x_3s[i], lam_1s[0] ,lam_2s[0], lam_3s[0], u_1s[i], u_2s[i], u_3s[i], dt)
@@ -151,10 +150,10 @@ class NMPCSimulatorSystem():
 
         return lam_1s, lam_2s, lam_3s
 
-    def final_state_func(self):
+    def final_state_func(self, goals):
         """this func usually need
         """
-        pass
+        self.state_ref = goals
 
     def _predict_state_with_oylar(self, x_1, x_2, x_3, u_1, u_2, u_3, dt):
         """in this case this function is the same as simulator
@@ -474,7 +473,7 @@ class NMPCController_with_CGMRES():
         self.history_raw_2 = []
         self.history_f = []
 
-    def calc_input(self, x_1, x_2, x_3, time):
+    def calc_input(self, x_1, x_2, x_3,cmd_pose, time):
         """
         Parameters
         ------------
@@ -496,6 +495,8 @@ class NMPCController_with_CGMRES():
             estimated optimal system input
         """
         # calculating sampling time
+
+        self.simulator.final_state_func(cmd_pose)
        
         dt = self.tf * (1. - np.exp(-self.alpha * time)) / float(self.N)
 
