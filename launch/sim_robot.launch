@@ -1,0 +1,19 @@
+<launch>
+  <arg name="model" default="$(find mpc)/urdf/robot.urdf" />
+  <!--<arg name="rvizconfig" default="$(find mpc)/rviz/move_robot.rviz" />-->
+  <arg name="joy" default="false" />
+  <param name="robot_description" command="$(find xacro)/xacro.py $(arg model)" />
+
+  <group if="$(arg joy)">
+    <node name="joy_node"   pkg="joy" type="joy_node" />
+    <node name="basic_twist_publisher" pkg="basic_lecture" type="basic_twist_publisher"/>
+  </group>
+  <node name="str_sim_node" pkg="mpc" type="str_sim_node">
+  <param name="initial_x" value="-10"/>
+  <param name="initial_y" value="5"/>
+  <param name="initial_th" value="3"/>
+  </node>
+
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
+  <node name="rviz" pkg="rviz" type="rviz"  required="true" />
+</launch>
