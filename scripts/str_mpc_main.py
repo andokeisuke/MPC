@@ -6,6 +6,7 @@ from geometry_msgs.msg import Pose2D
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import Path
 import tf
 
 state_ref = Pose2D()
@@ -37,8 +38,12 @@ def main():
     listener = tf.TransformListener()
     cmd = Twist()
     state = Pose2D()
+    
+    
+        
 
     publisher = rospy.Publisher('cmd_vel',Twist, queue_size=10)
+    pub3 = rospy.Publisher('path',Path, queue_size=10)
     sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, callback)
     
     rate = rospy.Rate(10.0)
@@ -64,13 +69,29 @@ def main():
         i = 1
         time = float(i) #* dt
         
-        u_1s, u_2s, u_3s= controller.calc_input(state.x, state.y, state.theta,cmd_pose, time)
+        u_1s, u_2s, u_3s,x_1s, x_2s= controller.calc_input(state.x, state.y, state.theta,cmd_pose, time)
+
+        path = Path()
+        path.header.frame_id = "world" 
+        path.header.stamp = rospy.Time.now()
+        path.header.seq = 0;
+
+        for i in range(10):
+            p = PoseStamped()
+            p.header.frame_id = "world" 
+            p.header.stamp = rospy.Time.now()
+            p.header.seq = 0;
+            p.pose.position.x = x_1s[i]
+            p.pose.position.y = x_2s[i]
+            path.poses.append(p)
+
         
         cmd.linear.x = u_1s[0]
         cmd.linear.y = u_2s[0]
         cmd.angular.z = u_3s[0]
         
         publisher.publish(cmd)
+        pub3.publish(path)
         i = i + 1
 
 

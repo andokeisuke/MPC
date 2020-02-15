@@ -19,6 +19,19 @@ class NMPCSimulatorSystem():
         None
         """
         self.state_ref = []
+        self.w = 1
+        self.x11 = 3.5
+        self.x22 = 6.5
+        self.y11 = 3
+        self.y22 = 7
+        self.sigma = 5
+        self.delta = 0.15
+        self.P1 = 3
+        self.P2 = 3
+        self.P3 = 4
+        self.Q1 = 1
+        self.Q2 = 1
+        self.Q3 = 2
 
     def calc_predict_and_adjoint_state(self, x_1, x_2, x_3, u_1s, u_2s, u_3s, N, dt):
         """main
@@ -137,10 +150,10 @@ class NMPCSimulatorSystem():
         # final state
         # final_state_func
        
-
-        lam_1s = [x_1s[-1]-self.state_ref[0]]
-        lam_2s = [x_2s[-1]-self.state_ref[1]]
-        lam_3s = [x_3s[-1]-self.state_ref[2]]
+        #終端コスト
+        lam_1s = [self.P1*(x_1s[-1]-self.state_ref[0])]
+        lam_2s = [self.P2*(x_2s[-1]-self.state_ref[1])]
+        lam_3s = [self.P3*(x_3s[-1]-self.state_ref[2])]
 
         for i in range(N-1, 0, -1): 
             temp_lam_1, temp_lam_2, temp_lam_3 = self._adjoint_state_with_oylar(x_1s[i], x_2s[i], x_3s[i], lam_1s[0] ,lam_2s[0], lam_3s[0], u_1s[i], u_2s[i], u_3s[i], dt)
@@ -319,7 +332,20 @@ class NMPCSimulatorSystem():
         y_dot : float
             means -\dot{lam_1}
         """
-        y_dot = 0.
+        '''
+        y_dot = float()
+        if(y_1<self.delta):
+            y_dot += self.w * (y_1 + self.delta)
+        elif(y_1>10-self.delta):
+            y_dot += self.w * (y_1 - 10 + self.delta)
+
+        if(y_2<self.y22):
+            y_dot += self.w * math.exp(-(y_1-self.x22)**2/(2 * self.sigma**2))*(-(y_1-self.x22)/self.sigma**2)
+        elif(y_2>self.y11):
+            y_dot += self.w * math.exp(-(y_1-self.x11)**2/(2 * self.sigma**2))*(-(y_1-self.x11)/self.sigma**2)
+        '''
+
+        y_dot = self.Q1*(y_1 - self.state_ref[0])
         return y_dot
 
     def _func_lam_2(self, y_1, y_2, y_3, y_4, y_5, y_6, u_1, u_2, u_3):
@@ -349,7 +375,14 @@ class NMPCSimulatorSystem():
         y_dot : float
             means -\dot{lam_2}
         """
-        y_dot = 0.
+        '''
+        y_dot = float()
+        if(y_2<self.delta):
+            y_dot += self.w * (y_2 + self.delta)
+        elif(y_2>10-self.delta):
+            y_dot += self.w * (y_2 - 10 + self.delta)
+        '''
+        y_dot = self.Q2*(y_2 - self.state_ref[1])
         return y_dot
 
     def _func_lam_3(self, y_1, y_2, y_3, y_4, y_5, y_6, u_1, u_2, u_3):
@@ -379,7 +412,7 @@ class NMPCSimulatorSystem():
         y_dot : float
             means -\dot{lam_3}
         """
-        y_dot = 0. 
+        y_dot = self.Q3*(y_3 - self.state_ref[2]) 
         return y_dot
 
 class NMPCController_with_CGMRES():
@@ -443,7 +476,7 @@ class NMPCController_with_CGMRES():
         # parameters
         self.zeta = 100. # 安定化ゲイン
         self.ht = 0.01 # 差分近似の幅
-        self.tf = 1. # 最終時間
+        self.tf = 1 # 最終時間
         self.alpha = 0.5 # 時間の上昇ゲイン
         self.N = 10 # 分割数
         self.threshold = 0.001 # break値
@@ -453,15 +486,21 @@ class NMPCController_with_CGMRES():
 
         # simulator
         self.simulator = NMPCSimulatorSystem()
+        self.R1 = 1
+        self.R2 = 1
+        self.R3 = 1
+
 
         # initial
-        self.u_1s = np.ones(self.N) * 1
-        self.u_2s = np.ones(self.N) * 0
-        self.u_3s = np.ones(self.N) * 0.1
-        self.dummy_u_1s = np.ones(self.N) * 0.1
-        self.dummy_u_2s = np.ones(self.N) * 2.5
-        self.raw_1s = np.ones(self.N) * 0.8
-        self.raw_2s = np.ones(self.N) * 0.8
+        self.u_1s = np.ones(self.N) 
+        self.u_2s = np.ones(self.N) 
+        self.u_3s = np.ones(self.N) 
+        self.dummy_u_1s = np.ones(self.N) 
+        self.dummy_u_2s = np.ones(self.N) 
+        self.raw_1s = np.ones(self.N) 
+        self.raw_2s = np.ones(self.N) 
+
+        self.pre_cmd_pose = []
 
         # for fig
         self.history_u_1 = []
@@ -495,7 +534,18 @@ class NMPCController_with_CGMRES():
             estimated optimal system input
         """
         # calculating sampling time
+        
+        if(cmd_pose != self.pre_cmd_pose):
 
+            self.u_1s = np.ones(self.N) *0#* (-cmd_pose[0]/(cmd_pose[0]+cmd_pose[1] + 10e2))
+            self.u_2s = np.ones(self.N) *0#* (-cmd_pose[1]/(cmd_pose[0]+cmd_pose[1]+ + 10e2))
+            self.u_3s = np.ones(self.N) *0#* (-1.5)
+            self.dummy_u_1s = np.ones(self.N) #* 0.01/(cmd_pose[0]+cmd_pose[1]+ 10e2)
+            self.dummy_u_2s = np.ones(self.N) /6.6#* 0.03/(2*cmd_pose[2]+ 10e2)
+            self.raw_1s = np.ones(self.N) /200#* (cmd_pose[0]+cmd_pose[1])/2
+            self.raw_2s = np.ones(self.N) *0.033#* cmd_pose[2]/3
+
+        self.pre_cmd_pose = cmd_pose
         self.simulator.final_state_func(cmd_pose)
        
         dt = self.tf * (1. - np.exp(-self.alpha * time)) / float(self.N)
@@ -623,7 +673,7 @@ class NMPCController_with_CGMRES():
         self.history_raw_1.append(self.raw_1s[0])
         self.history_raw_2.append(self.raw_2s[0])
 
-        return self.u_1s, self.u_2s, self.u_3s
+        return self.u_1s, self.u_2s, self.u_3s, x_1s, x_2s
 
     def _calc_f(self, x_1s, x_2s, x_3s, lam_1s, lam_2s, lam_3s, u_1s, u_2s,  u_3s,dummy_u_1s, dummy_u_2s, raw_1s, raw_2s, N, dt):
         """
@@ -663,9 +713,9 @@ class NMPCController_with_CGMRES():
         F = []
 
         for i in range(N):
-            F.append(u_1s[i] + lam_1s[i] + 2 * raw_1s[i] * u_1s[i])
-            F.append(u_2s[i] + lam_2s[i] + 2 * raw_1s[i] * u_2s[i])
-            F.append(u_3s[i] + lam_3s[i] + 2 * raw_2s[i] * u_3s[i])
+            F.append(self.R1 * u_1s[i] + lam_1s[i] + 2 * raw_1s[i] * (u_1s[i] + u_2s[i]))
+            F.append(self.R2 * u_2s[i] + lam_2s[i] + 2 * raw_1s[i] * (u_1s[i] + u_2s[i]))
+            F.append(self.R3 * u_3s[i] + lam_3s[i] + 2 * raw_2s[i] * u_3s[i])
             F.append(-0.01 + 2. * raw_1s[i] * dummy_u_1s[i])
             F.append(-0.01 + 2. * raw_2s[i] * dummy_u_2s[i])
             F.append((u_1s[i] + u_2s[i])**2 + dummy_u_1s[i]**2 - 1.**2)
