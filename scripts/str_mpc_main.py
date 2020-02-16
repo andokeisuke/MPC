@@ -41,7 +41,7 @@ def main():
     state_ref.x = rospy.get_param("str_sim_node/initial_x")
     state_ref.y = rospy.get_param("str_sim_node/initial_y")
     state_ref.theta = rospy.get_param("str_sim_node/initial_th")
-    
+    N=2
     
         
 
@@ -83,7 +83,7 @@ def main():
         path.header.stamp = rospy.Time.now()
         path.header.seq = 0;
 
-        for i in range(8):
+        for i in range(controller.N):
             p = PoseStamped()
             p.header.frame_id = "world" 
             p.header.stamp = rospy.Time.now()
@@ -92,7 +92,14 @@ def main():
             p.pose.position.y = x_2s[i]
             path.poses.append(p)
 
-        
+        if(u_1s[0]>N):
+            u_1s[0]=N
+        if(u_1s[0]<-N):
+            u_1s[0]=-N
+        if(u_2s[0]>N):
+            u_2s[0]=N
+        if(u_2s[0]<-N):
+            u_2s[0]=-N
         cmd.linear.x = u_1s[0]
         cmd.linear.y = u_2s[0]
         cmd.angular.z = u_3s[0]

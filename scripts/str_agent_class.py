@@ -21,19 +21,19 @@ class NMPCSimulatorSystem():
         """
         self.state_ref = []
         self.w1 = 200
-        self.w2 =  300
+        self.w2 =  200
         self.x11 = 3
         self.x22 = 6.5
         self.y11 = 4
         self.y22 = 7.5
-        self.sigma = 1
+        self.sigma = 0.1
         self.delta = 0.15
         self.P1 = 4
         self.P2 = 4
         self.P3 = 4
-        self.Q1 = 1
-        self.Q2 = 1
-        self.Q3 = 1
+        self.Q1 = 2
+        self.Q2 = 2
+        self.Q3 = 2
 
     def calc_predict_and_adjoint_state(self, x_1, x_2, x_3, u_1s, u_2s, u_3s, N, dt):
         """main
@@ -478,9 +478,9 @@ class NMPCController_with_CGMRES():
         # parameters
         self.zeta = 100. # 安定化ゲイン
         self.ht = 0.01 # 差分近似の幅
-        self.tf = 1 # 最終時間
+        self.tf = 0.5 # 最終時間
         self.alpha = 0.5 # 時間の上昇ゲイン
-        self.N = 10 # 分割数
+        self.N = 20 # 分割数
         self.threshold = 0.001 # break値
 
         self.input_num = 7 # dummy, 制約条件に対するuにも合わせた入力の数
@@ -488,11 +488,11 @@ class NMPCController_with_CGMRES():
 
         # simulator
         self.simulator = NMPCSimulatorSystem()
-        self.R1 = 5
-        self.R2 = 5
-        self.R3 = 5
+        self.R1 = 10
+        self.R2 = 10
+        self.R3 = 10
 
-        self.u_1_lim = 1
+        self.u_1_lim = 2
         self.u_2_lim = 1.5
         self.i = 0
 
@@ -530,8 +530,8 @@ class NMPCController_with_CGMRES():
                     self.R3 * x[2] + lam3 + 2 * x[4] * x[2],
                     -0.01 + 2 * x[3] * x[5],
                     -0.01 + 2 * x[4] * x[6],
-                    x[0]**2 + x[1]**2 + x[5]**2 - 1,
-                    x[2]**2 + x[6]**2 - 1.5**2
+                    x[0]**2 + x[1]**2 + x[5]**2 - self.u_1_lim**2,
+                    x[2]**2 + x[6]**2 - self.u_2_lim**2
                     
                     
                 ]
@@ -677,7 +677,8 @@ class NMPCController_with_CGMRES():
             v_est = Av - sum_Av
 
             hs[i+1, i] = np.linalg.norm(v_est)
-
+            if(hs[i+1, i]==0):
+                hs[i+1,1]=1e-5
             vs[:, i+1] = v_est / hs[i+1, i]
 
             inv_hs = np.linalg.pinv(hs[:i+1, :i]) # この辺は教科書（実時間の方）にのっています
@@ -769,8 +770,8 @@ class NMPCController_with_CGMRES():
             F.append(self.R3 * u_3s[i] + lam_3s[i] + 2 * raw_2s[i] * u_3s[i])
             F.append(-0.01 + 2. * raw_1s[i] * dummy_u_1s[i])
             F.append(-0.01 + 2. * raw_2s[i] * dummy_u_2s[i])
-            F.append(u_1s[i]**2 + u_2s[i]**2 + dummy_u_1s[i]**2 - 1.**2)
-            F.append(u_3s[i]**2 + dummy_u_2s[i]**2 - 1.5**2)
+            F.append(u_1s[i]**2 + u_2s[i]**2 + dummy_u_1s[i]**2 - self.u_1_lim**2)
+            F.append(u_3s[i]**2 + dummy_u_2s[i]**2 - self.u_2_lim**2)
         
         return np.array(F)
 
