@@ -38,6 +38,9 @@ def main():
     listener = tf.TransformListener()
     cmd = Twist()
     state = Pose2D()
+    state_ref.x = rospy.get_param("str_sim_node/initial_x")
+    state_ref.y = rospy.get_param("str_sim_node/initial_y")
+    state_ref.theta = rospy.get_param("str_sim_node/initial_th")
     
     
         
@@ -46,8 +49,9 @@ def main():
     pub3 = rospy.Publisher('path',Path, queue_size=10)
     sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, callback)
     
-    rate = rospy.Rate(10.0)
+    rate = rospy.Rate(100.0)
     controller = str_agent_class.NMPCController_with_CGMRES()
+    i = 0
     
     while not rospy.is_shutdown():
         try:
@@ -66,17 +70,20 @@ def main():
         
 
         cmd_pose = [state_ref.x, state_ref.y, state_ref.theta]
-        i = 1
-        time = float(i) #* dt
-        
+       
+        time = float(i*0.01) #* dt
+        if(cmd_pose!=controller.pre_cmd_pose):
+            i = 0
+
         u_1s, u_2s, u_3s,x_1s, x_2s= controller.calc_input(state.x, state.y, state.theta,cmd_pose, time)
+        controller.pre_cmd_pose = cmd_pose
 
         path = Path()
         path.header.frame_id = "world" 
         path.header.stamp = rospy.Time.now()
         path.header.seq = 0;
 
-        for i in range(10):
+        for i in range(8):
             p = PoseStamped()
             p.header.frame_id = "world" 
             p.header.stamp = rospy.Time.now()
@@ -93,6 +100,8 @@ def main():
         publisher.publish(cmd)
         pub3.publish(path)
         i = i + 1
+        #r.sleep()
+
 
 
 if __name__ == "__main__":
