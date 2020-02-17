@@ -15,6 +15,9 @@
   <param name="initial_th" value="0"/>
   </node>
 
+  <arg name="map_file" default="$(find mpc)/map/my_map.yaml"/>
+  <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
+
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
   <node name="rviz" pkg="rviz" type="rviz"  required="true" />
 </launch>
