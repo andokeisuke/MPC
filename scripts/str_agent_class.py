@@ -20,20 +20,24 @@ class NMPCSimulatorSystem():
         None
         """
         self.state_ref = []
-        self.w1 = 200
-        self.w2 =  200
-        self.x11 = 3
-        self.x22 = 6.5
-        self.y11 = 4
-        self.y22 = 7.5
-        self.sigma = 0.1
-        self.delta = 0.15
-        self.P1 = 4
-        self.P2 = 4
-        self.P3 = 4
-        self.Q1 = 2
-        self.Q2 = 2
-        self.Q3 = 2
+        self.w1 = 200#壁
+        self.w2 = 100#フェンス
+        self.w3 = 500#障害物
+
+        
+        self.H = 10
+        self.h = [4.05, 1.59, 2.56, 2.92, 4.05, 4.25, 2.56, 5.58, 4.05, 6.91]
+        self.W = 6.25
+        self.delta = 0.3
+        self.sigma1 = 0.001
+        self.sigma2 = 0.5
+
+        self.P1 = 10
+        self.P2 = 10
+        self.P3 = 5
+        self.Q1 = 5
+        self.Q2 = 5
+        self.Q3 = 5
 
     def calc_predict_and_adjoint_state(self, x_1, x_2, x_3, u_1s, u_2s, u_3s, N, dt):
         """main
@@ -338,13 +342,16 @@ class NMPCSimulatorSystem():
         y_dot = float()
         if(y_1<self.delta):
             y_dot += self.w1 * (y_1 + self.delta)
-        if(y_1>10-self.delta):
-            y_dot += self.w1 * (y_1 - 10 + self.delta)
+        if(y_1>self.W-self.delta):
+            y_dot += self.w1 * (y_1 - self.W + self.delta)
 
-        if(y_2<self.y22):
-            y_dot += self.w2 * math.exp(-(y_1-self.x22)**2/(2 * self.sigma**2))*(-(y_1-self.x22)/self.sigma**2)
-        if(y_2>self.y11):
-            y_dot += self.w2 * math.exp(-(y_1-self.x11)**2/(2 * self.sigma**2))*(-(y_1-self.x11)/self.sigma**2)
+        if(y_2<self.h[1]):
+            y_dot += self.w2 * math.exp(-(y_1-self.h[0])**2/(2 * self.sigma1**2))*(-(y_1-self.h[0])/self.sigma1**2)
+        if(y_2>self.h[9]):
+            y_dot += self.w2 * math.exp(-(y_1-self.h[0])**2/(2 * self.sigma1**2))*(-(y_1-self.h[0])/self.sigma1**2)
+        
+        for i in range(5):
+            y_dot += self.w3 * math.exp(-( ((y_1-self.h[2*i])**2+(y_2-self.h[2*i+1])**2 )/ (2*self.sigma2**2)  )) * (-(y_1-self.h[2*i])/self.sigma2**2)
         
 
         y_dot += self.Q1*(y_1 - self.state_ref[0])
@@ -381,8 +388,11 @@ class NMPCSimulatorSystem():
         y_dot = float()
         if(y_2<self.delta):
             y_dot += self.w1 * (y_2 + self.delta)
-        if(y_2>10-self.delta):
-            y_dot += self.w1 * (y_2 - 10 + self.delta)
+        if(y_2>self.H-self.delta):
+            y_dot += self.w1 * (y_2 - self.H + self.delta)
+
+        for i in range(5):
+            y_dot += self.w3 * math.exp(-( ((y_1-self.h[2*i])**2+(y_2-self.h[2*i+1])**2 )/ (2*self.sigma2**2)  )) * (-(y_2-self.h[2*i+1])/self.sigma2**2)
         
         y_dot += self.Q2*(y_2 - self.state_ref[1])
         return y_dot
@@ -488,8 +498,8 @@ class NMPCController_with_CGMRES():
 
         # simulator
         self.simulator = NMPCSimulatorSystem()
-        self.R1 = 10
-        self.R2 = 10
+        self.R1 = 20
+        self.R2 = 20
         self.R3 = 10
 
         self.u_1_lim = 2
